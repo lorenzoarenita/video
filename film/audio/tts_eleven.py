@@ -3,7 +3,7 @@
 # Writes build/voice/<id>.wav (48 kHz) so mix.py / assemble.py pick them up unchanged.
 #   python3 tts_eleven.py --voices   -> pick and cache one Spanish voice per character
 #   python3 tts_eleven.py [ids...]   -> synthesize (all lines, or only the given ids)
-import os, sys, json, subprocess, urllib.request, urllib.parse
+import os, sys, json, subprocess, urllib.request, urllib.parse, urllib.error
 from lines import LINES
 
 KEY = os.environ.get("ELEVENLABS_API_KEY")
@@ -29,16 +29,19 @@ WANT = {
     "lucia":   ("female", "young", "soft natural young woman"),
     "lucia_old": ("female", "old", "old woman soft"),
     "nina":    ("female", "young", "child girl"),
+    "alba":    ("female", "young", "young woman clear"),
+    "amiga":   ("female", "young", "lively young woman"),
     "mateo":   ("male", "young", "young man soft"),
     "andres":  ("male", "middle_aged", "calm man"),
     "otro":    ("male", "middle_aged", "neutral narrator"),
+    "otra":    ("female", "middle_aged", "neutral formal woman"),
 }
 # character in lines.py -> cast slot, plus per-line delivery
 SLOT = {"madre": "madre", "madre80": "madre80", "padre": "padre", "abuelo": "abuelo",
         "lucia2": "nina", "lucia6": "nina", "alba5": "nina", "nieta": "nina",
-        "lucia16": "lucia", "lucia19": "lucia", "lucia38": "lucia", "lucia52": "lucia", "alba15": "lucia", "alba50": "lucia", "amiga": "lucia",
+        "lucia16": "lucia", "lucia19": "lucia", "lucia38": "lucia", "lucia52": "lucia", "alba15": "alba", "alba50": "alba", "amiga": "amiga",
         "lucia79": "lucia_old", "lucia88": "lucia_old",
-        "mateo": "mateo", "andres": "andres", "galerista": "otro", "carta1": "otro", "carta2": "madre", "carta3": "padre"}
+        "mateo": "mateo", "andres": "andres", "galerista": "otro", "carta1": "otro", "carta2": "otra", "carta3": "otro"}
 # Eleven v4 direction: free-text tags in square brackets, stackable, followed in sequence; [pause]/[long pause] for breaks.
 # Each entry replaces the line's text when sent (the subtitles keep the plain text from lines.py).
 V4 = {
@@ -103,7 +106,9 @@ PITCH = {}  # v4 is directed by tags; no pitch tricks
 def pick_model():
     """Use ElevenLabs v4: ask the API which v4 TTS models this account has and take the newest. Never fall back to v3."""
     global MODEL
-    ids = [m["model_id"] for m in call("/v1/models")]
+    try: ids = [m["model_id"] for m in call("/v1/models")]
+    except urllib.error.HTTPError as e:  # key without models_read: trust the configured v4 model
+        print("modelo:", MODEL, f"(sin listar modelos: HTTP {e.code})"); return
     if MODEL in ids: print("modelo:", MODEL); return
     ms = [m for m in call("/v1/models") if m.get("can_do_text_to_speech") and "v4" in m["model_id"].lower()]
     if not ms: sys.exit("La cuenta no ofrece ningún modelo v4: " + ", ".join(m["model_id"] for m in call("/v1/models")))
