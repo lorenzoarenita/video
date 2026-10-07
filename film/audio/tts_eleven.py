@@ -107,8 +107,8 @@ def pick_model():
     """Use ElevenLabs v4: ask the API which v4 TTS models this account has and take the newest. Never fall back to v3."""
     global MODEL
     try: ids = [m["model_id"] for m in call("/v1/models")]
-    except urllib.error.HTTPError as e:  # key without models_read: trust the configured v4 model
-        print("modelo:", MODEL, f"(sin listar modelos: HTTP {e.code})"); return
+    except urllib.error.HTTPError as e:  # restricted keys may lack models_read; trust the configured v4 model
+        print(f"no se pueden listar modelos ({e.code}); uso {MODEL}"); return
     if MODEL in ids: print("modelo:", MODEL); return
     ms = [m for m in call("/v1/models") if m.get("can_do_text_to_speech") and "v4" in m["model_id"].lower()]
     if not ms: sys.exit("La cuenta no ofrece ningún modelo v4: " + ", ".join(m["model_id"] for m in call("/v1/models")))
