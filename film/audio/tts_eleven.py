@@ -10,7 +10,7 @@ API = "https://api.elevenlabs.io"
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "..", "build", "voice"); os.makedirs(OUT, exist_ok=True)
 CAST = os.path.join(HERE, "cast.json")
-MODEL = os.environ.get("ELEVEN_MODEL", "eleven_v3")
+MODEL = os.environ.get("ELEVEN_MODEL", "")  # empty -> newest v4 model the account offers
 
 def call(path, data=None, raw=False, method=None):
     req = urllib.request.Request(API + path, data=json.dumps(data).encode() if data is not None else None,
@@ -38,7 +38,7 @@ SLOT = {"madre": "madre", "madre80": "madre80", "padre": "padre", "abuelo": "abu
         "lucia16": "lucia", "lucia19": "lucia", "lucia38": "lucia", "lucia52": "lucia", "alba15": "lucia", "alba50": "lucia", "amiga": "lucia",
         "lucia79": "lucia_old", "lucia88": "lucia_old",
         "mateo": "mateo", "andres": "andres", "galerista": "otro", "carta1": "otro", "carta2": "madre", "carta3": "padre"}
-# eleven_v3 audio tags for delivery (ignored by older models when stripped)
+# audio tags for delivery (ignored by older models when stripped)
 TAG = {"l00": "[whispers]", "l01": "[softly, moved]", "l02": "[softly]", "l03": "[whispers]", "l05": "[curious]",
        "l13": "[gently]", "l14": "[gently]", "l17": "[sad, softly]", "l18": "[quietly]", "l21": "[annoyed]",
        "l22": "[shouting, upset]", "l23": "[softly]", "l24": "[whispers]", "l26": "[sad]", "l27": "[sad]",
@@ -47,6 +47,15 @@ TAG = {"l00": "[whispers]", "l01": "[softly, moved]", "l02": "[softly]", "l03": 
        "l39": "[excited]", "l53": "[excited, shouting]", "l16": "[excited, shouting]", "l08": "[excited]"}
 # characters whose pitch we still nudge to sound younger (no child voices are guaranteed)
 PITCH = {"lucia2": 300, "lucia6": 150, "alba5": 200, "nieta": 200}
+
+def pick_model():
+    """Use ElevenLabs v4: ask the API which v4 TTS models this account has and take the newest. Never fall back to v3."""
+    global MODEL
+    if MODEL: return
+    ms = [m for m in call("/v1/models") if m.get("can_do_text_to_speech") and "v4" in m["model_id"].lower()]
+    if not ms: sys.exit("La cuenta no ofrece ningún modelo v4: " + ", ".join(m["model_id"] for m in call("/v1/models")))
+    ms.sort(key=lambda m: (("es" in [l.get("language_id") for l in m.get("languages", [])]), m["model_id"]), reverse=True)
+    MODEL = ms[0]["model_id"]; print("modelo:", MODEL)
 
 def pick_voices():
     cast = json.load(open(CAST)) if os.path.exists(CAST) else {}
@@ -73,7 +82,7 @@ def synth(only):
     for lid, shot, t, ch, text, fx in LINES:
         if only and lid not in only: continue
         vid = cast[SLOT[ch]]
-        txt = (TAG.get(lid, "") + " " + text).strip() if MODEL == "eleven_v3" else text
+        txt = (TAG.get(lid, "") + " " + text).strip()  # v4 audio tags
         body = {"text": txt, "model_id": MODEL, "voice_settings": {"stability": 0.5, "similarity_boost": 0.8, "style": 0.3}}
         mp3 = call(f"/v1/text-to-speech/{vid}?output_format=mp3_44100_192", body, raw=True)
         p = f"{OUT}/{lid}_el.mp3"; open(p, "wb").write(mp3)
@@ -83,6 +92,7 @@ def synth(only):
         print(lid, ch, text)
 
 if __name__ == "__main__":
+    pick_model()
     if "--voices" in sys.argv: pick_voices()
     else:
         if not os.path.exists(CAST): pick_voices()
