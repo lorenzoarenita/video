@@ -1,11 +1,12 @@
-# Re-voice every line with ElevenLabs. Reads ELEVENLABS_API_KEY from the environment.
+# Re-voice every line with ElevenLabs. Uses ELEVENLABS_API_KEY if set; otherwise relies on the
+# environment's network secret for api.elevenlabs.io to add the xi-api-key header.
 # Writes build/voice/<id>.wav (48 kHz) so mix.py / assemble.py pick them up unchanged.
 #   python3 tts_eleven.py --voices   -> pick and cache one Spanish voice per character
 #   python3 tts_eleven.py [ids...]   -> synthesize (all lines, or only the given ids)
 import os, sys, json, subprocess, urllib.request, urllib.parse
 from lines import LINES
 
-KEY = os.environ.get("ELEVENLABS_API_KEY") or sys.exit("ELEVENLABS_API_KEY no está definida")
+KEY = os.environ.get("ELEVENLABS_API_KEY")
 API = "https://api.elevenlabs.io"
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "..", "build", "voice"); os.makedirs(OUT, exist_ok=True)
@@ -14,7 +15,7 @@ MODEL = os.environ.get("ELEVEN_MODEL", "eleven_v4")
 
 def call(path, data=None, raw=False, method=None):
     req = urllib.request.Request(API + path, data=json.dumps(data).encode() if data is not None else None,
-                                 headers={"xi-api-key": KEY, "Content-Type": "application/json"}, method=method)
+                                 headers={"Content-Type": "application/json", **({"xi-api-key": KEY} if KEY else {})}, method=method)
     with urllib.request.urlopen(req, timeout=120) as r:
         b = r.read()
     return b if raw else json.loads(b)

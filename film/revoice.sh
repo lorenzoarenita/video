@@ -1,6 +1,7 @@
 #!/bin/bash
 # Rehace las voces con ElevenLabs y vuelve a montar la película sin re-renderizar imagen ni música.
-# Necesita: ELEVENLABS_API_KEY en el entorno y acceso de red a api.elevenlabs.io
+# Necesita acceso de red a api.elevenlabs.io y la clave: ELEVENLABS_API_KEY en el entorno,
+# o un secreto de red para api.elevenlabs.io con la cabecera xi-api-key.
 set -e
 cd "$(dirname "$0")"
 command -v sox >/dev/null || (apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq sox libsox-fmt-mp3 fonts-ebgaramond)
