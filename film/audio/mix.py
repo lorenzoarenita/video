@@ -29,6 +29,7 @@ def amb(shot, gen, gain=1., t0=0., dur=None, fi=1.5, fo=1.5, extra=0.):
 
 # ---- dialogue ------------------------------------------------------------------
 timed = []
+last_end = {}
 for lid, shot, t, ch, text, fx in LINES:
     a, sr = sf.read(f"{B}/voice/{lid}.wav", dtype="float32")
     if a.ndim == 2: a = a.mean(1)
@@ -44,7 +45,8 @@ for lid, shot, t, ch, text, fx in LINES:
     elif fx == "memory":
         a = reverb(lp(a, 5000), 2.6, .5, 3500); g = .65; pan = [-.4, .35, -.1][int(lid[-1]) % 3]
     else: a = st(a); g = 1.
-    gs = at(shot) + t if not shot.startswith("black") else at(shot) + t
+    gs = max(at(shot) + t, last_end.get(shot, -1e9) + .3)  # never let a longer take step on the next line
+    last_end[shot] = gs + len(a) / SR
     if fx == "voicemail" and lid == "l31": put("fx", gs - 1.2, phone_beep(), .8)
     put("dia", gs, a, g, pan)
     timed.append(dict(id=lid, start=gs, end=gs + len(a) / SR + .5, text=text, ch=ch))
