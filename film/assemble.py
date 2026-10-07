@@ -62,7 +62,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 """
     open(os.path.join(B, "film.ass"), "w").write(hdr + "\n".join(ev) + "\n")
 
-def build(out, crf=17, preset="slow", extra_v=None, scale=None, audio=True):
+def build(out, crf=17, preset="slow", extra_v=None, scale=None, audio=True, subs=True, venc=None):
     tl = edit.timeline()
     inputs, filt = [], []
     n = 0
@@ -95,7 +95,7 @@ def build(out, crf=17, preset="slow", extra_v=None, scale=None, audio=True):
             cur_len += e["dur"]
         cur = f"x{k}"
     ass = os.path.join(B, "film.ass").replace(":", "\\:")
-    post = f"[{cur}]pad={W}:{H}:0:{TOP}:black,ass='{ass}'"
+    post = f"[{cur}]pad={W}:{H}:0:{TOP}:black" + (f",ass='{ass}'" if subs else "")
     if scale: post += f",scale={scale}:flags=lanczos"
     if extra_v: post += "," + extra_v
     filt.append(post + "[v]")
@@ -104,15 +104,32 @@ def build(out, crf=17, preset="slow", extra_v=None, scale=None, audio=True):
     if audio: cmd += ["-i", os.path.join(B, "mix.wav")]
     cmd += ["-filter_complex_script", os.path.join(B, "filter.txt"), "-map", "[v]"]
     if audio: cmd += ["-map", f"{n}:a", "-af", "loudnorm=I=-17:TP=-1.5:LRA=14", "-c:a", "aac", "-b:a", "192k", "-ar", "48000"]
-    cmd += ["-c:v", "libx264", "-preset", preset, "-crf", str(crf), "-pix_fmt", "yuv420p", "-movflags", "+faststart", "-t", f"{min(cur_len, LIMIT):.3f}", out]
+    cmd += (venc or ["-c:v", "libx264", "-preset", preset, "-crf", str(crf)]) + [ "-pix_fmt", "yuv420p", "-movflags", "+faststart", "-t", f"{min(cur_len, LIMIT):.3f}", out]
     print(" ".join(cmd[:8]), "...")
     subprocess.run(cmd, check=True)
     return cur_len
 
+def from_kit(out):
+    """Final film from the saved clean picture (kit/picture_*.mp4) + current subtitles + build/mix.wav."""
+    parts = sorted(f for f in os.listdir(os.path.join(edit.ROOT, "kit")) if f.startswith("picture_"))
+    lst = os.path.join(B, "parts.txt")
+    open(lst, "w").write("".join(f"file '{os.path.join(edit.ROOT, 'kit', p)}'\n" for p in parts))
+    ass = os.path.join(B, "film.ass").replace(":", "\\:")
+    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", lst, "-i", os.path.join(B, "mix.wav"),
+                    "-vf", f"ass='{ass}'", "-map", "0:v", "-map", "1:a", "-af", "loudnorm=I=-17:TP=-1.5:LRA=14",
+                    "-c:v", "libx264", "-preset", "slow", "-b:v", "880k", "-maxrate", "3000k", "-bufsize", "6000k",
+                    "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", "-t", f"{edit.total():.3f}", out], check=True)
+
 if __name__ == "__main__":
     write_ass()
     if "--ass" in sys.argv: sys.exit()
-    if "--preview" in sys.argv:
+    if "--clean" in sys.argv:   # picture only, no subtitles, no sound -> kit (for re-voicing later)
+        os.makedirs(os.path.join(edit.ROOT, "kit"), exist_ok=True)
+        print("length", build(os.path.join(B, "picture_clean.mp4"), audio=False, subs=False,
+                              venc=["-c:v", "libx264", "-preset", "slow", "-crf", "20", "-maxrate", "2100k", "-bufsize", "4200k", "-g", "240"]))
+    elif "--kit" in sys.argv:
+        from_kit(os.path.join(edit.ROOT, "..", "TODA_LA_LUZ.mp4"))
+    elif "--preview" in sys.argv:
         LIMIT = float(sys.argv[sys.argv.index("--preview") + 1])
         print("length", build(os.path.join(B, "preview.mp4"), crf=30, preset="ultrafast", scale="960:540"))
     else:
