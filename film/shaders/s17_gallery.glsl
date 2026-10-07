@@ -12,7 +12,7 @@ vec3 print(vec2 q, int i){
 
 vec3 scene(vec2 uv, float t){
   vec2 p = cuv(uv);
-  float x = p.x + mix(-.9, .9 * 2.2, p_track);
+  float x = p.x + mix(-.9, 3.3, p_track);
   vec3 col = vec3(.62, .6, .57);
   // wall/floor line
   float floorY = -.36;

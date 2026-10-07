@@ -35,7 +35,7 @@ shot("s13", "s13_platform", 26, train=[[0,0],[9,0],[20,1]], gone=[[0,0],[19,0],[
 shot("s14", "s14_darkroom", 26, dev=[[0,0],[4,0],[22,1]], cam=[[0,0],[26,1]], tex=["assets/photos/s13_24.png"])
 shot("s15", "s15_desk", 20, ring=[[0,0],[3,0],[3.3,1],[13,1],[13.5,0]], cam=[[0,0],[20,1]])
 shot("s16", "s16_corridor", 26, cam=[[0,0],[26,1]], flicker=1, temp=-0.3, sat=-0.3)
-shot("s17", "s17_gallery", 24, track=[[0,0],[20,0.86],[24,0.9]], crowd=1, tex=["assets/photos/s06_6.png","assets/photos/s05_18.png","assets/photos/s13_24.png","assets/photos/ph_father.png"])
+shot("s17", "s17_gallery", 24, track=[[0,0],[19,1],[24,1.0]], crowd=1, tex=["assets/photos/s06_6.png","assets/photos/s05_18.png","assets/photos/s13_24.png","assets/photos/ph_father.png"])
 
 shot("s18", "s18_kitchen", 20, var=0, cam=[[0,0],[20,1]], exposure=-0.1)
 shot("s19", "s19_newborn", 28, focus=[[0,0.2],[8,0.9],[28,1]], eyes=[[0,0],[16,0],[19,1]], tear=[[0,1],[12,0.3]], fadeIn=1.5)
