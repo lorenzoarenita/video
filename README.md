@@ -7,6 +7,7 @@ Lucía abre los ojos por primera vez y el mundo es una mancha de luz con un rost
 ![Toda la luz](media/poster.jpg)
 
 - **La película:** [`TODA_LA_LUZ.mp4`](TODA_LA_LUZ.mp4) — 11 min 32 s, 1920×1080 (imagen 2,39:1), estéreo, castellano con subtítulos incrustados.
+- Versión ligera (AV1, 23 MB): [`media/TODA_LA_LUZ_ligera_av1.mp4`](media/TODA_LA_LUZ_ligera_av1.mp4)
 - Guion: [`film/GUION.md`](film/GUION.md)
 
 ## Cómo está hecha
