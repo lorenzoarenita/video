@@ -1,0 +1,4 @@
+film/node_modules/
+film/build/
+__pycache__/
+*.part.mp4
