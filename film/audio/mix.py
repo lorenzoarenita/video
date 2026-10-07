@@ -34,7 +34,7 @@ for lid, shot, t, ch, text, fx in LINES:
     if a.ndim == 2: a = a.mean(1)
     a = a / (np.sqrt((a ** 2).mean()) + 1e-9) * 0.07
     pan = 0.
-    if fx == "womb":   a = lp(a, 380, 3) * 2.2; a = reverb(a, .5, .3, 900); g = .9
+    if fx == "womb":   a = lp(a, 420, 3) * 1.3; a = reverb(a, .5, .3, 900); g = .5
     elif fx == "room": a = reverb(lp(a, 9000), .7, .22, 5000); g = 1.
     elif fx == "dry":  a = reverb(a, .45, .1, 6000); g = 1.
     elif fx == "far":  a = reverb(lp(a, 4500), 1.3, .35, 4000); g = .85
@@ -79,7 +79,7 @@ amb("s07", lambda d: rain(d, .2), 1, extra=.8); amb("s07", lambda d: room(d, .03
 amb("s08", lambda d: room(d, .03), 1); amb("s08", lambda d: birds(d, .5, .03), 1)
 put("fx", at("s08") + 15.9, shutter(), .9)
 put("fx", at("s08") + 5.5, st(hp(noise(1.5), 2500) * .02 * (np.sin(np.arange(secs(1.5)) / SR * 2 * np.pi * 9) > .8)), .8)  # focus ring
-amb("s09", lambda d: engine(d, .14), 1, fi=.05); amb("s09", lambda d: beat_music(d, 100, .2, 2000), 1, fi=.05)
+amb("s09", lambda d: engine(d, .14), 1, fi=.05); amb("s09", lambda d: beat_music(d, 100, .13, 2000), 1, fi=.05)
 amb("s09", lambda d: babble(d, vox, .06), 1, fi=.05); amb("s09", lambda d: city(d, .08), 1, fi=.05)
 amb("s10", lambda d: room(d, .035), 1, fi=.02, dur=9.4, fo=.02); amb("s10", lambda d: clock(d, .03), 1, dur=9.4, fi=.02, fo=.02)
 put("fx", at("s10") + 9.1, door_slam(), 1.)
@@ -92,7 +92,7 @@ put("fx", at("s13") + 8.5, train_depart(15), .8)
 put("fx", at("s13") + 23.5, shutter(), .7)
 amb("s14", lambda d: slosh(d, .05), 1); amb("s14", lambda d: clock(d, .035, 120), 1); amb("s14", lambda d: room(d, .02), 1)
 amb("s15", lambda d: city(d, .04), 1); amb("s15", lambda d: room(d, .03), 1)
-put("fx", at("s15"), buzz_phone(20, start=3.3, stop=13.2, gain=.25), .8)
+put("fx", at("s15"), buzz_phone(20, start=3.3, stop=13.2, gain=.25), .45)
 amb("s16", lambda d: fluor_hum(d, .035), 1, fi=.05); amb("s16", lambda d: ventilation(d, .05), 1, fi=.05)
 amb("s17", lambda d: babble(d, vox, .09), 1)
 put("fx", at("s17") + 8.0, applause(7, .35), .8)

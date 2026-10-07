@@ -63,7 +63,7 @@ VOICES = {
     "madre80":  ("ef_dora", 0.78, -2.6, {"tremolo": 0.03}),
     "padre":    ("em_alex", 0.88, -1.2, {}),
     "abuelo":   ("em_santa", 0.82, -1.5, {}),
-    "lucia2":   ("ef_dora", 0.85, 6.5, {}),
+    "lucia2":   ("ef_dora", 0.85, 5.0, {}),
     "lucia6":   ("ef_dora", 0.98, 5.0, {}),
     "lucia16":  ("ef_dora", 1.05, 1.6, {}),
     "lucia19":  ("ef_dora", 0.9, 1.0, {}),

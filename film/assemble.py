@@ -5,6 +5,7 @@ B = os.path.join(edit.ROOT, "build")
 SH = os.path.join(B, "shots")
 W, H, AH = 1920, 1080, 804
 TOP = (H - AH) // 2
+LIMIT = 1e9
 
 def ts(t):
     t = max(0, t); h = int(t // 3600); m = int(t % 3600 // 60); s = t % 60
@@ -32,6 +33,14 @@ def write_ass():
     e = tl["end"]["start"]
     add("Title", e + 1.5, e + 6.5, "{\\fad(1500,1500)}TODA LA LUZ")
     add("Thought", e + 7.0, e + 13.5, "{\\fad(1500,1500)}Para alguien que todavía no ha llegado.")
+    cred = ("Imagen: escenas escritas en GLSL y renderizadas fotograma a fotograma\\N"
+            "Música original para piano y cuerdas (Salamander Grand Piano · VSCO 2 Community Edition)\\N"
+            "Voces: Kokoro · Sonido sintetizado")
+    add("Credit", e + 15.0, e + 24.5, "{\\fad(1500,2000)}" + cred)
+    # camera flashes when she takes a photograph
+    for shot, tt in (("s11", 17.0), ("s13", 23.5)):
+        s0 = tl[shot]["start"] + tt
+        add("Flash", s0, s0 + .5, "{\\fad(0,420)\\p1}m 0 0 l 1920 0 1920 1080 0 1080{\\p0}", layer=5)
     hdr = f"""[Script Info]
 ScriptType: v4.00+
 PlayResX: {W}
@@ -44,6 +53,8 @@ Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour,
 Style: Dia,EB Garamond,46,&H00E6EAEE,&H000000FF,&H00000000,&H64000000,0,0,0,0,100,100,0.5,0,1,0,0,2,80,80,46,1
 Style: Thought,EB Garamond,56,&H00F2F2F2,&H000000FF,&H00000000,&H80000000,0,1,0,0,100,100,1,0,1,0,2,2,160,160,{TOP + 150},1
 Style: Age,EB Garamond,40,&H00A8A8A8,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,6,0,1,0,0,7,96,96,{TOP // 2 - 22},1
+Style: Credit,EB Garamond,34,&H00B4B4B4,&H000000FF,&H00000000,&H00000000,0,1,0,0,100,100,1,0,1,0,0,5,0,0,0,1
+Style: Flash,Arial,20,&H00FFFFFF,&H000000FF,&H00FFFFFF,&H00000000,0,0,0,0,100,100,0,0,1,0,0,7,0,0,0,1
 Style: Title,EB Garamond,104,&H00F4F4F4,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,26,0,1,0,0,5,0,0,0,1
 
 [Events]
@@ -57,7 +68,7 @@ def build(out, crf=17, preset="slow", extra_v=None, scale=None, audio=True):
     n = 0
     for k, e in enumerate(tl):
         name, d = e["name"], e["dur"]
-        if name in edit.SHOTS:
+        if name in edit.SHOTS and os.path.exists(os.path.join(SH, name + ".mp4")):
             inputs += ["-i", os.path.join(SH, name + ".mp4")]
             chain = f"[{n}:v]scale={W}:{AH}:flags=lanczos,setsar=1,fps=24,format=yuv420p,trim=duration={d},setpts=PTS-STARTPTS"
         else:
@@ -69,7 +80,7 @@ def build(out, crf=17, preset="slow", extra_v=None, scale=None, audio=True):
             chain += f",fade=t=in:st=0:d={e['td'] * .6:.2f}"
         if nxt and nxt["tr"] == "dip" and nxt["td"] > 0:
             chain += f",fade=t=out:st={d - nxt['td'] * .6:.2f}:d={nxt['td'] * .6:.2f}"
-        filt.append(chain + f"[c{k}]")
+        filt.append(chain + f",fps=24,settb=1/24[c{k}]")
         n += 1
     # chain: concat for cuts/dips, xfade for dissolves
     cur = "c0"; cur_len = tl[0]["dur"]
@@ -77,10 +88,10 @@ def build(out, crf=17, preset="slow", extra_v=None, scale=None, audio=True):
         e = tl[k]
         if e["tr"] == "dissolve":
             off = cur_len - e["td"]
-            filt.append(f"[{cur}][c{k}]xfade=transition=fade:duration={e['td']}:offset={off:.3f}[x{k}]")
+            filt.append(f"[{cur}][c{k}]xfade=transition=fade:duration={e['td']}:offset={off:.3f},settb=1/24[x{k}]")
             cur_len = cur_len + e["dur"] - e["td"]
         else:
-            filt.append(f"[{cur}][c{k}]concat=n=2:v=1:a=0[x{k}]")
+            filt.append(f"[{cur}][c{k}]concat=n=2:v=1:a=0,settb=1/24[x{k}]")
             cur_len += e["dur"]
         cur = f"x{k}"
     ass = os.path.join(B, "film.ass").replace(":", "\\:")
@@ -89,11 +100,11 @@ def build(out, crf=17, preset="slow", extra_v=None, scale=None, audio=True):
     if extra_v: post += "," + extra_v
     filt.append(post + "[v]")
     open(os.path.join(B, "filter.txt"), "w").write(";\n".join(filt))
-    cmd = ["ffmpeg", "-y", "-loglevel", "error", "-stats"] + inputs
+    cmd = ["ffmpeg", "-y", "-loglevel", "error"] + inputs
     if audio: cmd += ["-i", os.path.join(B, "mix.wav")]
     cmd += ["-filter_complex_script", os.path.join(B, "filter.txt"), "-map", "[v]"]
     if audio: cmd += ["-map", f"{n}:a", "-af", "loudnorm=I=-17:TP=-1.5:LRA=14", "-c:a", "aac", "-b:a", "192k", "-ar", "48000"]
-    cmd += ["-c:v", "libx264", "-preset", preset, "-crf", str(crf), "-pix_fmt", "yuv420p", "-movflags", "+faststart", "-t", f"{cur_len:.3f}", out]
+    cmd += ["-c:v", "libx264", "-preset", preset, "-crf", str(crf), "-pix_fmt", "yuv420p", "-movflags", "+faststart", "-t", f"{min(cur_len, LIMIT):.3f}", out]
     print(" ".join(cmd[:8]), "...")
     subprocess.run(cmd, check=True)
     return cur_len
@@ -101,5 +112,9 @@ def build(out, crf=17, preset="slow", extra_v=None, scale=None, audio=True):
 if __name__ == "__main__":
     write_ass()
     if "--ass" in sys.argv: sys.exit()
-    out = sys.argv[1] if len(sys.argv) > 1 and not sys.argv[1].startswith("-") else os.path.join(B, "TODA_LA_LUZ_master.mp4")
-    print("length", build(out))
+    if "--preview" in sys.argv:
+        LIMIT = float(sys.argv[sys.argv.index("--preview") + 1])
+        print("length", build(os.path.join(B, "preview.mp4"), crf=30, preset="ultrafast", scale="960:540"))
+    else:
+        out = sys.argv[1] if len(sys.argv) > 1 and not sys.argv[1].startswith("-") else os.path.join(B, "TODA_LA_LUZ_master.mp4")
+        print("length", build(out))

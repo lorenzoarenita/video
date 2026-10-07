@@ -21,6 +21,8 @@ INSTR = {
     "solovln": (VS + "/Strings/Solo Violin/Arco Vib/*.wav", r"_([A-G]#?\d)_(f|p)", 0.25, 0.8, 0.6),
 }
 LAYER = {"p": 1, "mp": 2, "mf": 3, "f": 4}
+# VSCO-2 names sustained samples one octave below sounding pitch (measured)
+OCT = {"violins": 12, "violas": 12, "celli": 12, "bass": 12, "flute": 12, "clarinet": 12}
 
 @lru_cache(None)
 def index(inst):
@@ -29,7 +31,7 @@ def index(inst):
     for f in glob.glob(g):
         m = re.search(rx, f)
         if not m: continue
-        n = midi(m.group(1)); lay = m.group(2)
+        n = midi(m.group(1)) + OCT.get(inst, 0); lay = m.group(2)
         lay = LAYER.get(lay, None) or int(lay)
         out.setdefault(n, []).append((lay, f))
     for n in out: out[n].sort()

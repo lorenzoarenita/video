@@ -55,11 +55,12 @@ vec3 scene(vec2 uv, float t){
   bool morning = var > 1.5;
   // sky
   vec3 top = morning ? vec3(.45, .62, .85) : vec3(.35, .45, .65);
-  vec3 hor = morning ? vec3(1.3, 1.15, .95) : vec3(1.9, 1.05, .45);
+  vec3 hor = morning ? vec3(1.7, 1.35, .9) : vec3(1.9, 1.05, .45);
   vec3 col = mix(hor, top, sat((p.y + .2) * 1.3));
-  vec2 sunp = morning ? vec2(-.75, .15) : vec2(.62, -.08);
+  vec2 sunp = morning ? vec2(.72, .1) : vec2(.62, -.08);
   float sd = length(p - sunp);
-  col += vec3(2.5, 1.6, .7) * glow(sd, .05) * (morning ? .4 : .8);
+  col += vec3(2.5, 1.6, .7) * glow(sd, .05) * (morning ? .7 : .8);
+  if (morning){ float ang = atan(p.y - sunp.y, p.x - sunp.x); col += vec3(1.4, 1.1, .7) * pow(sat(sin(ang * 14. + sin(t * .2) * .3) * .5 + .5), 3.) * exp(-sd * 2.2) * .1 * step(-.3, p.y); }
   col += vec3(4., 3., 1.8) * smoothstep(.045, .04, sd) * (morning ? .5 : 1.);
   // distant trees, hazy
   float far = -.12 + .08 * fbm(vec2(p.x * 3., 1.)) + .03 * fbm(vec2(p.x * 12., 4.));
@@ -69,8 +70,9 @@ vec3 scene(vec2 uv, float t){
   col = mix(col, haze * .4, fill(p.y - mid, .006) * .9);
   // ground
   float gy = -.3 + .015 * sin(p.x * 2.);
-  vec3 groundC = morning ? vec3(.06, .07, .04) : vec3(.05, .03, .02);
+  vec3 groundC = morning ? vec3(.07, .09, .035) : vec3(.05, .03, .02);
   float gm = fill(p.y - gy, .003);
+  if (morning) groundC += vec3(.25, .22, .08) * smoothstep(-.6, gy, p.y) * .4;
   // ground lit faintly
   vec3 gcol = groundC + vec3(.4, .25, .1) * glow(length(p - vec2(sunp.x, gy)), .25) * .3 * float(!morning);
   col = mix(col, gcol, gm);
