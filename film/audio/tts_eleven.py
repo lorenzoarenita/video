@@ -10,7 +10,7 @@ API = "https://api.elevenlabs.io"
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "..", "build", "voice"); os.makedirs(OUT, exist_ok=True)
 CAST = os.path.join(HERE, "cast.json")
-MODEL = os.environ.get("ELEVEN_MODEL", "")  # empty -> newest v4 model the account offers
+MODEL = os.environ.get("ELEVEN_MODEL", "eleven_v4")
 
 def call(path, data=None, raw=False, method=None):
     req = urllib.request.Request(API + path, data=json.dumps(data).encode() if data is not None else None,
@@ -38,20 +38,72 @@ SLOT = {"madre": "madre", "madre80": "madre80", "padre": "padre", "abuelo": "abu
         "lucia16": "lucia", "lucia19": "lucia", "lucia38": "lucia", "lucia52": "lucia", "alba15": "lucia", "alba50": "lucia", "amiga": "lucia",
         "lucia79": "lucia_old", "lucia88": "lucia_old",
         "mateo": "mateo", "andres": "andres", "galerista": "otro", "carta1": "otro", "carta2": "madre", "carta3": "padre"}
-# audio tags for delivery (ignored by older models when stripped)
-TAG = {"l00": "[whispers]", "l01": "[softly, moved]", "l02": "[softly]", "l03": "[whispers]", "l05": "[curious]",
-       "l13": "[gently]", "l14": "[gently]", "l17": "[sad, softly]", "l18": "[quietly]", "l21": "[annoyed]",
-       "l22": "[shouting, upset]", "l23": "[softly]", "l24": "[whispers]", "l26": "[sad]", "l27": "[sad]",
-       "l32": "[warm]", "l34": "[softly]", "l37": "[crying softly]", "l38": "[whispers]", "l40": "[shouting, upset]",
-       "l42": "[emotional]", "l43": "[tired, tender]", "l50": "[softly, smiling]", "l51": "[softly]", "l52": "[whispers, weak]",
-       "l39": "[excited]", "l53": "[excited, shouting]", "l16": "[excited, shouting]", "l08": "[excited]"}
+# Eleven v4 direction: free-text tags in square brackets, stackable, followed in sequence; [pause]/[long pause] for breaks.
+# Each entry replaces the line's text when sent (the subtitles keep the plain text from lines.py).
+V4 = {
+ "l00": "[muffled, from far away, tender, out of breath] Ya casi... [pause] ya casi, mi amor.",
+ "l01": "[whispers, overwhelmed with love, voice trembling] Hola... [pause] [softly laughs] Hola, Lucía.",
+ "l02": "[whispers, tearful, smiling] Ya estás aquí.",
+ "l03": "[softly, to a baby, wonder] Mira... [pause] la luz.",
+ "l04": "[gentle, hushed, close to a small child at night] ¿Ves? [pause] Es la luna.",
+ "l05": "[small child voice, two years old, curious, trying a new word] Lu... [pause] na.",
+ "l06": "[small child voice, two years old, delighted] ¡Agua!",
+ "l07": "[small child voice, two years old, amazed, quiet] Fuego.",
+ "l08": "[small child voice, two years old, happy, calling out] ¡Mamá!",
+ "l09": "[old man, warm, patient, slightly out of breath while kneeling] Haz un hoyo pequeño. [pause] Así.",
+ "l10": "[old man, warm, gently] Ahora... la semilla.",
+ "l11": "[little girl, six years old, curious] ¿Cuándo saldrá el limonero?",
+ "l12": "[old man, chuckles softly] Uy... [pause] dentro de mucho.",
+ "l13": "[old man, tender, wise, unhurried] Lo que se planta hoy no es para uno, Lucía.",
+ "l14": "[old man, softly, smiling] Es para alguien que todavía no ha llegado.",
+ "l15": "[father, calm and reassuring, over the sound of waves] No tengas miedo. [pause] Dame la mano.",
+ "l16": "[little girl, six years old, shouting with joy from the water, laughing] ¡Papá, mira!",
+ "l17": "[mother, holding back tears, very gently] El abuelo se ha ido, cariño.",
+ "l18": "[little girl, quietly, confused] ¿Adónde?",
+ "l19": "[father, warm, a little shy, proud] Toma. [pause] Para que guardes lo que mires.",
+ "l20": "[teenage girl, shouting over loud music, laughing] ¡Lucía! ¡Vente, que nos vamos!",
+ "l21": "[mother, tired, worried, controlled anger, late at night] ¿Tú sabes qué hora es?",
+ "l22": "[teenage girl, sixteen, shouting, furious, voice cracking] ¡Déjame! [pause] ¡Tú no me entiendes!",
+ "l23": "[young man, whispers, lying under the stars, amused] ¿Qué miras?",
+ "l24": "[young woman, whispers, dreamy] Todo.",
+ "l25": "[young man, softly laughs, flirting] Pues hazme una foto.",
+ "l26": "[young man, sad, guilty, quiet, on a train platform] Lo siento, Lucía.",
+ "l27": "[young man, barely holding it together] No puedo quedarme.",
+ "l28": "[formal, polite, cold, reading a letter] Gracias por su interés, pero...",
+ "l29": "[formal, detached, reading a letter] No encaja con nuestra línea.",
+ "l30": "[formal, slightly apologetic, reading a letter] Quizá el año que viene.",
+ "l31": "[older man, voicemail, a little hesitant] Lucía, soy papá.",
+ "l32": "[older man, voicemail, warm, a bit awkward, smiling] Nada... [pause] que me he acordado de cuando te di la cámara.",
+ "l33": "[older man, voicemail, gentle, no pressure] Llámame cuando puedas.",
+ "l34": "[older man, voicemail, softly, after a pause] [pause] Te quiero.",
+ "l35": "[gallery owner, warm, impressed, quiet among a crowd] Enhorabuena, Lucía. [pause] Es precioso.",
+ "l36": "[man, sleepy, tender, morning, murmuring] Quédate un poco más.",
+ "l37": "[woman, crying softly, overwhelmed with love, whispering to her newborn] Hola... [pause] [sniff] Hola, mi vida.",
+ "l38": "[whispers, tearful, smiling] Alba.",
+ "l39": "[little girl, five years old, excited, calling from the garden] ¡Mamá, mira!",
+ "l40": "[teenage girl, fifteen, shouting, furious, slamming a door] ¡Déjame! [pause] ¡Tú no me entiendes!",
+ "l41": "[woman in her fifties, on the phone, hesitant, emotional] Mamá...",
+ "l42": "[woman in her fifties, on the phone, voice breaking, sincere] Perdóname por aquella vez. [pause] Ahora lo entiendo.",
+ "l43": "[very old woman, frail, tender, smiling through tears, on the phone] Ay, hija. [pause] Yo ya lo sabía.",
+ "l44": "[old woman, warm, patient, kneeling in the garden] Haz un hoyo pequeño. [pause] Así.",
+ "l45": "[little girl, six years old, curious] ¿Cuándo saldrá?",
+ "l46": "[old woman, chuckles softly] Uy... [pause] dentro de mucho.",
+ "l47": "[old woman, tender, wise, unhurried] Lo que se planta hoy no es para una.",
+ "l48": "[old woman, softly, smiling] Es para alguien que todavía no ha llegado.",
+ "l49": "[little girl, six years old, puzzled] ¿Y tú cómo lo sabes?",
+ "l50": "[old woman, long pause, then softly, smiling, moved] [pause] Porque yo llegué.",
+ "l51": "[woman, at a deathbed, holding back tears, very gently] Mamá. [pause] Estoy aquí.",
+ "l52": "[very old woman, dying, faint whisper, peaceful, amazed] Mira... [long pause] qué luz.",
+ "l53": "[little girl, shouting with joy from far across the garden] ¡Mamá! ¡Ha salido!",
+}
 # characters whose pitch we still nudge to sound younger (no child voices are guaranteed)
-PITCH = {"lucia2": 300, "lucia6": 150, "alba5": 200, "nieta": 200}
+PITCH = {}  # v4 is directed by tags; no pitch tricks
 
 def pick_model():
     """Use ElevenLabs v4: ask the API which v4 TTS models this account has and take the newest. Never fall back to v3."""
     global MODEL
-    if MODEL: return
+    ids = [m["model_id"] for m in call("/v1/models")]
+    if MODEL in ids: print("modelo:", MODEL); return
     ms = [m for m in call("/v1/models") if m.get("can_do_text_to_speech") and "v4" in m["model_id"].lower()]
     if not ms: sys.exit("La cuenta no ofrece ningún modelo v4: " + ", ".join(m["model_id"] for m in call("/v1/models")))
     ms.sort(key=lambda m: (("es" in [l.get("language_id") for l in m.get("languages", [])]), m["model_id"]), reverse=True)
@@ -82,8 +134,8 @@ def synth(only):
     for lid, shot, t, ch, text, fx in LINES:
         if only and lid not in only: continue
         vid = cast[SLOT[ch]]
-        txt = (TAG.get(lid, "") + " " + text).strip()  # v4 audio tags
-        body = {"text": txt, "model_id": MODEL, "voice_settings": {"stability": 0.5, "similarity_boost": 0.8, "style": 0.3}}
+        txt = V4.get(lid, text)
+        body = {"text": txt, "model_id": MODEL, "voice_settings": {"stability": 0.4, "similarity_boost": 0.8}}
         mp3 = call(f"/v1/text-to-speech/{vid}?output_format=mp3_44100_192", body, raw=True)
         p = f"{OUT}/{lid}_el.mp3"; open(p, "wb").write(mp3)
         eff = ["pitch", str(PITCH[ch])] if ch in PITCH else []
